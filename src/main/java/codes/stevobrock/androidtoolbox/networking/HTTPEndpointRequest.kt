@@ -1,5 +1,6 @@
 package codes.stevobrock.androidtoolbox.networking
 
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import com.squareup.moshi.Moshi
@@ -7,6 +8,13 @@ import okhttp3.Response
 
 //----------------------------------------------------------------------------------------------------------------------
 abstract class HTTPEndpointRequest {
+
+	// Types
+	enum class State {
+		QUEUED,
+		ACTIVE,
+		FINISHED,
+	}
 
 	// Properties
 	val	method :HTTPEndpointMethod
@@ -16,6 +24,8 @@ abstract class HTTPEndpointRequest {
 	val	timeoutInterval :Double
 	val	bodyData :ByteArray?
 
+	var	state = State.QUEUED
+		private set
 	var	isCancelled = false
 		private set
 
@@ -60,20 +70,23 @@ abstract class HTTPEndpointRequest {
 //		this.bodyData = bodyData
 //	}
 
-//	//------------------------------------------------------------------------------------------------------------------
-//	constructor(method :HTTPEndpointMethod = HTTPEndpointMethod.GET, url :URL, timeoutInterval :Double) {
-//		// Store
-//		this.method = method
-//		this.path = url.toString()
-//		this.queryParameters = null
-//		this.headers = null
-//		this.timeoutInterval = timeoutInterval
-//		this.bodyData = null
-//	}
+	//------------------------------------------------------------------------------------------------------------------
+	constructor(method :HTTPEndpointMethod, uri :Uri, timeoutInterval :Double) {
+		// Store
+		this.method = method
+		this.path = uri.toString()
+		this.queryParameters = null
+		this.headers = null
+		this.timeoutInterval = timeoutInterval
+		this.bodyData = null
+	}
 
 	// Instance methods
 	//------------------------------------------------------------------------------------------------------------------
 	fun cancel() { this.isCancelled = true }
+
+	//------------------------------------------------------------------------------------------------------------------
+	fun transitionToState(state :State) { this.state = state }
 
 	// Subclass methods
 	//------------------------------------------------------------------------------------------------------------------
@@ -89,7 +102,7 @@ class SuccessHTTPEndpointRequest : HTTPEndpointRequest {
 	// Lifecycle methods
 	//------------------------------------------------------------------------------------------------------------------
 	constructor(method :HTTPEndpointMethod, path :String, queryParameters :Map<String, Any>? = null,
-				headers :Map<String, String>? = null, timeoutInterval :Double = 0.0) :
+			headers :Map<String, String>? = null, timeoutInterval :Double = 0.0) :
 		super(method, path, queryParameters, headers, timeoutInterval, null)
 
 	// HTTPEndpointRequest methods
@@ -111,7 +124,7 @@ class HeadHTTPEndpointRequest : HTTPEndpointRequest {
 	// Lifecycle methods
 	//------------------------------------------------------------------------------------------------------------------
 	constructor(method :HTTPEndpointMethod, path :String, queryParameters :Map<String, Any>? = null,
-				headers :Map<String, String>? = null, timeoutInterval :Double = 0.0) :
+			headers :Map<String, String>? = null, timeoutInterval :Double = 0.0) :
 		super(method, path, queryParameters, headers, timeoutInterval, null)
 
 	// HTTPEndpointRequest methods
@@ -133,8 +146,12 @@ class DataHTTPEndpointRequest : HTTPEndpointRequest {
 	// Lifecycle methods
 	//------------------------------------------------------------------------------------------------------------------
 	constructor(method :HTTPEndpointMethod, path :String, queryParameters :Map<String, Any>? = null,
-				headers :Map<String, String>? = null, timeoutInterval :Double = 0.0) :
+			headers :Map<String, String>? = null, timeoutInterval :Double = 0.0) :
 		super(method, path, queryParameters, headers, timeoutInterval, null)
+
+	//------------------------------------------------------------------------------------------------------------------
+	constructor(uri :Uri, method :HTTPEndpointMethod = HTTPEndpointMethod.GET, timeoutInterval :Double = 0.0) :
+		super(method, uri, timeoutInterval)
 
 	// HTTPEndpointRequest methods
 	//------------------------------------------------------------------------------------------------------------------
@@ -155,7 +172,7 @@ class StringHTTPEndpointRequest : HTTPEndpointRequest {
 	// Lifecycle methods
 	//------------------------------------------------------------------------------------------------------------------
 	constructor(method :HTTPEndpointMethod, path :String, queryParameters :Map<String, Any>? = null,
-				headers :Map<String, String>? = null, timeoutInterval :Double = 0.0) :
+			headers :Map<String, String>? = null, timeoutInterval :Double = 0.0) :
 		super(method, path, queryParameters, headers, timeoutInterval, null)
 
 	// HTTPEndpointRequest methods
@@ -186,7 +203,7 @@ class JSONHTTPEndpointRequest<T :Any> : HTTPEndpointRequest {
 	// Lifecycle methods
 	//------------------------------------------------------------------------------------------------------------------
 	constructor(clazz :Class<T>, method :HTTPEndpointMethod, path :String, queryParameters :Map<String, Any>?,
-				headers :Map<String, String>?, timeoutInterval :Double) :
+			headers :Map<String, String>?, timeoutInterval :Double) :
 		super(method, path, queryParameters, headers, timeoutInterval, null) { this.clazz = clazz }
 
 	// HTTPEndpointRequest methods

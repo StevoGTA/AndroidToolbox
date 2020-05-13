@@ -1,4 +1,4 @@
-package codes.stevobrock.androidtoolbox.general
+package codes.stevobrock.androidtoolbox.model
 
 //----------------------------------------------------------------------------------------------------------------------
 interface NotificationObserver {
