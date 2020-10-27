@@ -5,6 +5,7 @@ import android.os.Handler
 import android.os.Looper
 import com.squareup.moshi.Moshi
 import okhttp3.Response
+import java.net.URLEncoder
 
 //----------------------------------------------------------------------------------------------------------------------
 abstract class HTTPEndpointRequest {
@@ -16,10 +17,13 @@ abstract class HTTPEndpointRequest {
 		FINISHED,
 	}
 
+	data class MultiValueQueryComponent(val key :String, val values :List<Any>)
+
 	// Properties
 	val	method :HTTPEndpointMethod
 	val	path :String
-	val	queryParameters :Map<String, Any>?
+	val	queryComponents :Map<String, Any>?
+	val	multiValueQueryComponent :MultiValueQueryComponent?
 	val	headers :Map<String, String>?
 	val	timeoutInterval :Double
 	val	bodyData :ByteArray?
@@ -31,51 +35,79 @@ abstract class HTTPEndpointRequest {
 
 	// Lifecycle methods
 //	//------------------------------------------------------------------------------------------------------------------
-//	constructor(method :HTTPEndpointMethod, path :String, queryParameters :Map<String, Any>?,
-//			headers :Map<String, String>, timeoutInterval :Double) {
+//	constructor(method :HTTPEndpointMethod, path :String, queryComponents :Map<String, Any>?,
+//			multiValueQueryComponent :MultiValueQueryComponent?, headers :Map<String, String>,
+//			timeoutInterval :Double) {
 //		// Store
 //		this.method = method
 //		this.path = path
-//		this.queryParameters = queryParameters
+//		this.queryComponents = queryComponents
+//		this.multiValueQueryComponent = multiValueQueryComponent
 //		this.headers = headers
 //		this.timeoutInterval = timeoutInterval
 //		this.bodyData = null
 //	}
 
 	//------------------------------------------------------------------------------------------------------------------
-	constructor(method :HTTPEndpointMethod, path :String, queryParameters :Map<String, Any>?,
-				headers :Map<String, String>?, timeoutInterval :Double, bodyData :ByteArray?) {
+	constructor(method :HTTPEndpointMethod, path :String, queryComponents :Map<String, Any>?,
+			multiValueQueryComponent :MultiValueQueryComponent?, headers :Map<String, String>?, timeoutInterval :Double,
+			bodyData :ByteArray?) {
 		// Store
 		this.method = method
 		this.path = path
-		this.queryParameters = queryParameters
+		this.queryComponents = queryComponents
+		this.multiValueQueryComponent = multiValueQueryComponent
 		this.headers = headers
 		this.timeoutInterval = timeoutInterval
 		this.bodyData = bodyData
 	}
 
 //	//------------------------------------------------------------------------------------------------------------------
-//	constructor(method :HTTPEndpointMethod, path :String, queryParameters :Map<String, Any>? = null,
-//			headers :Map<String, String>?, timeoutInterval :Double, json :Object) {
+//	constructor(method :HTTPEndpointMethod, path :String, queryComponents :Map<String, Any>? = null,
+//			multiValueQueryComponent :MultiValueQueryComponent?, headers :Map<String, String>?, timeoutInterval :Double,
+//			jsonBody :Object) {
 //		// Setup
 //		var	headersUse = if (headers != null) HashMap<String, String>(headers!!) else HashMap<String, String>()
-//		headersUse.put("application/json", "Content-Type")
+//		headersUse["application/json"] = "Content-Type"
+//
+//		val moshi = Moshi.Builder().build()
+//		val	jsonString = moshi.adapter(HashMap<String, Any>.class).toJson(jsonBody)
 //
 //		// Store
 //		this.method = method
 //		this.path = path
-//		this.queryParameters = queryParameters
+//		this.queryComponents = queryComponents
+//		this.multiValueQueryComponent = multiValueQueryComponent
 //		this.headers = headersUse
 //		this.timeoutInterval = timeoutInterval
 //		this.bodyData = bodyData
 //	}
 
 	//------------------------------------------------------------------------------------------------------------------
+	constructor(method :HTTPEndpointMethod, path :String, queryComponents :Map<String, Any>? = null,
+			multiValueQueryComponent :MultiValueQueryComponent?, headers :Map<String, String>?, timeoutInterval :Double,
+			urlEncodedBody :Map<String, Any>) {
+		// Store
+		this.method = method
+		this.path = path
+		this.queryComponents = queryComponents
+		this.multiValueQueryComponent = multiValueQueryComponent
+		this.headers = headers
+		this.timeoutInterval = timeoutInterval
+		this.bodyData =
+				URLEncoder.encode(
+								urlEncodedBody.map { "${it.key}=${it.value}" }.joinToString(separator = "&"),
+									"utf-8")
+						.toByteArray()
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
 	constructor(method :HTTPEndpointMethod, uri :Uri, timeoutInterval :Double) {
 		// Store
 		this.method = method
 		this.path = uri.toString()
-		this.queryParameters = null
+		this.queryComponents = null
+		this.multiValueQueryComponent = null
 		this.headers = null
 		this.timeoutInterval = timeoutInterval
 		this.bodyData = null
@@ -101,9 +133,10 @@ class SuccessHTTPEndpointRequest : HTTPEndpointRequest {
 
 	// Lifecycle methods
 	//------------------------------------------------------------------------------------------------------------------
-	constructor(method :HTTPEndpointMethod, path :String, queryParameters :Map<String, Any>? = null,
-			headers :Map<String, String>? = null, timeoutInterval :Double = 0.0) :
-		super(method, path, queryParameters, headers, timeoutInterval, null)
+	constructor(method :HTTPEndpointMethod, path :String, queryComponents :Map<String, Any>? = null,
+			multiValueQueryComponent :MultiValueQueryComponent? = null, headers :Map<String, String>? = null,
+			timeoutInterval :Double = 0.0) :
+		super(method, path, queryComponents, multiValueQueryComponent, headers, timeoutInterval, null)
 
 	// HTTPEndpointRequest methods
 	//------------------------------------------------------------------------------------------------------------------
@@ -123,9 +156,10 @@ class HeadHTTPEndpointRequest : HTTPEndpointRequest {
 
 	// Lifecycle methods
 	//------------------------------------------------------------------------------------------------------------------
-	constructor(method :HTTPEndpointMethod, path :String, queryParameters :Map<String, Any>? = null,
-			headers :Map<String, String>? = null, timeoutInterval :Double = 0.0) :
-		super(method, path, queryParameters, headers, timeoutInterval, null)
+	constructor(method :HTTPEndpointMethod, path :String, queryComponents :Map<String, Any>? = null,
+			multiValueQueryComponent :MultiValueQueryComponent? = null, headers :Map<String, String>? = null,
+			timeoutInterval :Double = 0.0) :
+		super(method, path, queryComponents, multiValueQueryComponent, headers, timeoutInterval, null)
 
 	// HTTPEndpointRequest methods
 	//------------------------------------------------------------------------------------------------------------------
@@ -145,9 +179,10 @@ class DataHTTPEndpointRequest : HTTPEndpointRequest {
 
 	// Lifecycle methods
 	//------------------------------------------------------------------------------------------------------------------
-	constructor(method :HTTPEndpointMethod, path :String, queryParameters :Map<String, Any>? = null,
-			headers :Map<String, String>? = null, timeoutInterval :Double = 0.0) :
-		super(method, path, queryParameters, headers, timeoutInterval, null)
+	constructor(method :HTTPEndpointMethod, path :String, queryComponents :Map<String, Any>? = null,
+			multiValueQueryComponent :MultiValueQueryComponent? = null, headers :Map<String, String>? = null,
+			timeoutInterval :Double = 0.0) :
+		super(method, path, queryComponents, multiValueQueryComponent, headers, timeoutInterval, null)
 
 	//------------------------------------------------------------------------------------------------------------------
 	constructor(uri :Uri, method :HTTPEndpointMethod = HTTPEndpointMethod.GET, timeoutInterval :Double = 0.0) :
@@ -171,9 +206,10 @@ class StringHTTPEndpointRequest : HTTPEndpointRequest {
 
 	// Lifecycle methods
 	//------------------------------------------------------------------------------------------------------------------
-	constructor(method :HTTPEndpointMethod, path :String, queryParameters :Map<String, Any>? = null,
-			headers :Map<String, String>? = null, timeoutInterval :Double = 0.0) :
-		super(method, path, queryParameters, headers, timeoutInterval, null)
+	constructor(method :HTTPEndpointMethod, path :String, queryComponents :Map<String, Any>? = null,
+			multiValueQueryComponent :MultiValueQueryComponent? = null, headers :Map<String, String>? = null,
+			timeoutInterval :Double = 0.0) :
+		super(method, path, queryComponents, multiValueQueryComponent, headers, timeoutInterval, null)
 
 	// HTTPEndpointRequest methods
 	//------------------------------------------------------------------------------------------------------------------
@@ -202,9 +238,22 @@ class JSONHTTPEndpointRequest<T :Any> : HTTPEndpointRequest {
 
 	// Lifecycle methods
 	//------------------------------------------------------------------------------------------------------------------
-	constructor(clazz :Class<T>, method :HTTPEndpointMethod, path :String, queryParameters :Map<String, Any>?,
-			headers :Map<String, String>?, timeoutInterval :Double) :
-		super(method, path, queryParameters, headers, timeoutInterval, null) { this.clazz = clazz }
+	constructor(clazz :Class<T>, method :HTTPEndpointMethod, path :String, queryComponents :Map<String, Any>?,
+			multiValueQueryComponent :MultiValueQueryComponent?, headers :Map<String, String>?, timeoutInterval :Double,
+			bodyData :ByteArray?) :
+			super(method, path, queryComponents, multiValueQueryComponent, headers, timeoutInterval, bodyData) {
+		// Store
+		this.clazz = clazz
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	constructor(clazz :Class<T>, method :HTTPEndpointMethod, path :String, queryComponents :Map<String, Any>?,
+			multiValueQueryComponent :MultiValueQueryComponent?, headers :Map<String, String>?, timeoutInterval :Double,
+			urlEncodedBody :Map<String, Any>) :
+			super(method, path, queryComponents, multiValueQueryComponent, headers, timeoutInterval, urlEncodedBody) {
+		// Store
+		this.clazz = clazz
+	}
 
 	// HTTPEndpointRequest methods
 	//------------------------------------------------------------------------------------------------------------------
@@ -243,6 +292,16 @@ class JSONHTTPEndpointRequest<T :Any> : HTTPEndpointRequest {
 
 //----------------------------------------------------------------------------------------------------------------------
 inline fun <reified T : Any> JSONHTTPEndpointRequest(method :HTTPEndpointMethod, path :String,
-		queryParameters :Map<String, Any>? = null, headers :Map<String, String>? = null,
-		timeoutInterval :Double = 0.0) =
-	JSONHTTPEndpointRequest(T::class.java, method, path, queryParameters, headers, timeoutInterval)
+		queryComponents :Map<String, Any>? = null,
+		multiValueQueryComponent :HTTPEndpointRequest.MultiValueQueryComponent? = null,
+		headers :Map<String, String>? = null, timeoutInterval :Double = 0.0, bodyData :ByteArray? = null) =
+	JSONHTTPEndpointRequest(T::class.java, method, path, queryComponents, multiValueQueryComponent, headers,
+			timeoutInterval, bodyData)
+
+//----------------------------------------------------------------------------------------------------------------------
+inline fun <reified T : Any> JSONHTTPEndpointRequest(method :HTTPEndpointMethod, path :String,
+		queryComponents :Map<String, Any>? = null,
+		multiValueQueryComponent :HTTPEndpointRequest.MultiValueQueryComponent? = null,
+		headers :Map<String, String>? = null, timeoutInterval :Double = 0.0, urlEncodedBody :Map<String, Any>) =
+	JSONHTTPEndpointRequest(T::class.java, method, path, queryComponents, multiValueQueryComponent, headers,
+			timeoutInterval, urlEncodedBody)

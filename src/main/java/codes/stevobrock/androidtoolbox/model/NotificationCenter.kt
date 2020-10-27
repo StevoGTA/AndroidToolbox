@@ -8,7 +8,19 @@ interface NotificationObserver {
 }
 
 //----------------------------------------------------------------------------------------------------------------------
-object NotificationCenter {
+private class ProcNotificationObserver(private val proc :(sender :Any?, info :Map<String, Any>?) -> Unit)
+		: NotificationObserver {
+
+	// NotificationObserver methods
+	//------------------------------------------------------------------------------------------------------------------
+	override fun onReceiveNotification(name: String, sender: Any?, info: Map<String, Any>?) {
+		// Call proc
+		this.proc(sender, info)
+	}
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+class NotificationCenter {
 
 	// Types
 	private class NotificationObserverInfo(val sender :Any?, val notificationObserver :NotificationObserver)
@@ -23,6 +35,29 @@ object NotificationCenter {
 		val notificationObserverInfos = this.notificationObserverMap[name] ?: mutableListOf()
 		notificationObserverInfos.add(NotificationObserverInfo(sender, notificationObserver))
 		this.notificationObserverMap[name] = notificationObserverInfos
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	fun add(name :String, proc :(sender :Any?, info :Map<String, Any>?) -> Unit) :NotificationObserver {
+		// Setup
+		val notificationObserver = ProcNotificationObserver(proc)
+
+		// Add
+		add(notificationObserver, name, null)
+
+		return notificationObserver
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	fun add(name :String, sender :Any, proc :(sender :Any?, info :Map<String, Any>?) -> Unit)
+			:NotificationObserver {
+		// Setup
+		val notificationObserver = ProcNotificationObserver(proc)
+
+		// Add
+		add(notificationObserver, name, sender)
+
+		return notificationObserver
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -79,5 +114,13 @@ object NotificationCenter {
 				// Notify
 				it.notificationObserver.onReceiveNotification(name, sender, info)
 		}
+	}
+
+	// Companion object
+	//------------------------------------------------------------------------------------------------------------------
+	companion object {
+
+		// Properties
+		val	shared = NotificationCenter()
 	}
 }

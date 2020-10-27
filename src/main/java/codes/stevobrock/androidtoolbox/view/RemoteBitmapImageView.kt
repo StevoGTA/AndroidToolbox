@@ -13,9 +13,9 @@ class RemoteBitmapImageView : androidx.appcompat.widget.AppCompatImageView {
 	private	lateinit	var	remoteBitmapRetriever :RemoteBitmapRetriever
 
 	// Lifecycle methods
-	constructor(context :Context?) : super(context)
-	constructor(context :Context?, attributeSet :AttributeSet?) : super(context, attributeSet)
-	constructor(context :Context?, attributeSet :AttributeSet?, defaultStyleAttribute :Int) :
+	constructor(context :Context) : super(context)
+	constructor(context :Context, attributeSet :AttributeSet?) : super(context, attributeSet)
+	constructor(context :Context, attributeSet :AttributeSet?, defaultStyleAttribute :Int) :
 			super(context, attributeSet, defaultStyleAttribute)
 
 	// Instance methods

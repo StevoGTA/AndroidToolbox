@@ -130,21 +130,21 @@ open class HTTPEndpointClient(private val scheme :String, private val authority 
 							.path(this.path + httpEndpointRequest.path)
 
 					// Check if have query parameters
-					if (httpEndpointRequest.queryParameters != null) {
+					if (httpEndpointRequest.queryComponents != null) {
 						// Iterate query parameters
-						for ((key, value) in httpEndpointRequest.queryParameters) {
+						for ((key, value) in httpEndpointRequest.queryComponents) {
 							// Check value type
 							if (value is List<*>) {
 								// List
 								when (this.multiValueQueryParameterHandling) {
 									MultiValueQueryParameterHandling.REPEAT_KEY ->
 										// Repeat key
-										value.forEach { uriBuilder = uriBuilder.appendQueryParameter(key, "$it") }
+										value.forEach() { uriBuilder = uriBuilder.appendQueryParameter(key, "$it") }
 
 									MultiValueQueryParameterHandling.USE_COMMA -> {
 										// Use comma
 										var valuesString = ""
-										value.withIndex().forEach {
+										value.withIndex().forEach() {
 											// Update values string
 											valuesString += if (it.index == 0) "${it.value}" else ",${it.value}"
 										}
@@ -152,8 +152,8 @@ open class HTTPEndpointClient(private val scheme :String, private val authority 
 									}
 								}
 							} else
-							// Value
-								uriBuilder = uriBuilder.appendQueryParameter(key, "{it.value}")
+								// Value
+								uriBuilder = uriBuilder.appendQueryParameter(key, "$value")
 						}
 					}
 
@@ -166,7 +166,8 @@ open class HTTPEndpointClient(private val scheme :String, private val authority 
 					HTTPEndpointMethod.GET -> requestBuilder.get()
 					HTTPEndpointMethod.HEAD -> requestBuilder.head()
 					HTTPEndpointMethod.PATCH -> requestBuilder.patch(httpEndpointRequest.bodyData!!.toRequestBody())
-					HTTPEndpointMethod.POST -> requestBuilder.post((httpEndpointRequest.bodyData ?: ByteArray(0)).toRequestBody())
+					HTTPEndpointMethod.POST ->
+							requestBuilder.post((httpEndpointRequest.bodyData ?: ByteArray(0)).toRequestBody())
 					HTTPEndpointMethod.PUT -> requestBuilder.put(httpEndpointRequest.bodyData!!.toRequestBody())
 				}
 
@@ -180,9 +181,10 @@ open class HTTPEndpointClient(private val scheme :String, private val authority 
 				if (httpEndpointRequest.timeoutInterval != 0.0)
 					// Create new client with updated timeout
 					okHttpClient =
-						okHttpClient.newBuilder()
-							.readTimeout((httpEndpointRequest.timeoutInterval * 1000.0).toLong(), TimeUnit.MILLISECONDS)
-							.build()
+							okHttpClient.newBuilder()
+								.readTimeout((httpEndpointRequest.timeoutInterval * 1000.0).toLong(),
+										TimeUnit.MILLISECONDS)
+								.build()
 
 				// Build request
 				val request = requestBuilder.build()

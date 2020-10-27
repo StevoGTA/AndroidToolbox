@@ -104,7 +104,7 @@ open class FilesystemDataCache : DataCache {
 
 			// Write
 			file.writeBytes(data)
-			FileExtendedAttributes(this.file).set("lastAccessedDate", this.lastAccessedDate.rfc3339Extended())
+			FileExtendedAttributes(this.file).set("lastAccessedDate", this.lastAccessedDate.rfc3339Extended)
 		}
 
 		//--------------------------------------------------------------------------------------------------------------
@@ -130,7 +130,7 @@ open class FilesystemDataCache : DataCache {
 			this.lastAccessedDate = Date()
 
 			// Update filesystem
-			FileExtendedAttributes(this.file).set("lastAccessedDate", this.lastAccessedDate.rfc3339Extended())
+			FileExtendedAttributes(this.file).set("lastAccessedDate", this.lastAccessedDate.rfc3339Extended)
 		}
 	}
 
