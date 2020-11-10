@@ -87,17 +87,21 @@ abstract class HTTPEndpointRequest {
 	constructor(method :HTTPEndpointMethod, path :String, queryComponents :Map<String, Any>? = null,
 			multiValueQueryComponent :MultiValueQueryComponent?, headers :Map<String, String>?, timeoutInterval :Double,
 			urlEncodedBody :Map<String, Any>) {
+		// Setup
+		var	headersUse = if (headers != null) HashMap<String, String>(headers) else HashMap<String, String>()
+		headersUse["Content-Type"] = "application/x-www-form-urlencoded"
+
 		// Store
 		this.method = method
 		this.path = path
 		this.queryComponents = queryComponents
 		this.multiValueQueryComponent = multiValueQueryComponent
-		this.headers = headers
+		this.headers = headersUse
 		this.timeoutInterval = timeoutInterval
 		this.bodyData =
-				URLEncoder.encode(
-								urlEncodedBody.map { "${it.key}=${it.value}" }.joinToString(separator = "&"),
-									"utf-8")
+				urlEncodedBody
+						.map({ "${it.key}=" + URLEncoder.encode("${it.value}", "utf-8") })
+						.joinToString(separator = "&")
 						.toByteArray()
 	}
 
