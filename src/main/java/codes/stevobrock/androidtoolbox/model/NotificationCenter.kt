@@ -84,7 +84,8 @@ class NotificationCenter {
 	//------------------------------------------------------------------------------------------------------------------
 	fun remove(notificationObserver :NotificationObserver) {
 		// Iterate all notification names
-		this.notificationObserverMap.keys.forEach { name ->
+		val keys = this.notificationObserverMap.keys.toTypedArray()
+		keys.forEach { name ->
 			// Query existing
 			var notificationObserverInfos = this.notificationObserverMap[name]
 			if (notificationObserverInfos == null) return
@@ -92,7 +93,7 @@ class NotificationCenter {
 			// Remove
 			notificationObserverInfos =
 				notificationObserverInfos.filter {
-					(it.notificationObserver == notificationObserver)
+					(it.notificationObserver != notificationObserver)
 				} as MutableList<NotificationObserverInfo>
 
 			// Update
@@ -101,7 +102,7 @@ class NotificationCenter {
 				this.notificationObserverMap[name] = notificationObserverInfos
 			else
 				// No more
-				this.notificationObserverMap.remove((name))
+				this.notificationObserverMap.remove(name)
 		}
 	}
 
