@@ -2,9 +2,8 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 
 android {
-    compileSdkVersion 29
-    buildToolsVersion "29.0.3"
-
+    compileSdkVersion 30
+    buildToolsVersion '30.0.2'
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
@@ -12,7 +11,7 @@ android {
     defaultConfig {
         versionCode = 1
         versionName = '1.0'
-        targetSdkVersion 29
+        targetSdkVersion 30
         minSdkVersion 22
     }
     externalNativeBuild {
@@ -23,7 +22,7 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
-	ndkVersion '21.3.6528147'
+	ndkVersion '22.0.6917172 rc1'
 }
 
 dependencies {
@@ -31,9 +30,9 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.2.0'
     implementation 'com.google.android.gms:play-services-cast-framework:19.0.0'
     implementation 'com.google.android.material:material:1.2.1'
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation 'com.squareup.moshi:moshi:1.11.0'
     implementation 'com.squareup.okhttp3:okhttp:4.9.0'
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 }
 
 sourceCompatibility = "8"
