@@ -18,10 +18,10 @@ class LockingArrayList<T> {
 
 						return size
 					}
-			val	values :Array<T> get() {
+			val	values :List<T> get() {
 						// Get values
 						this.lock.readLock().lock()
-						val	values = this.arrayList.toArray() as Array<T>
+						val	values = this.arrayList.toList()
 						this.lock.readLock().unlock()
 
 						return values

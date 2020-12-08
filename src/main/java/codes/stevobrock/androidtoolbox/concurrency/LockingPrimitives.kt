@@ -19,26 +19,32 @@ class LockingInt(private var valueInternal :Int = 0) {
 
 	// Instance methods
 	//------------------------------------------------------------------------------------------------------------------
-	fun set(value :Int) {
+	fun set(value :Int) :LockingInt {
 		// Set
 		this.lock.writeLock().lock()
 		this.valueInternal = value
 		this.lock.writeLock().unlock()
+
+		return this
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
-	fun add(value :Int) {
+	fun add(value :Int) :LockingInt {
 		// Set
 		this.lock.writeLock().lock()
 		this.valueInternal += value
 		this.lock.writeLock().unlock()
+
+		return this
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
-	fun subtract(value :Int) {
+	fun subtract(value :Int) :LockingInt {
 		// Set
 		this.lock.writeLock().lock()
 		this.valueInternal -= value
 		this.lock.writeLock().unlock()
+
+		return this
 	}
 }

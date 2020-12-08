@@ -50,6 +50,66 @@ open class HTTPEndpointClient(private val scheme :String, private val authority 
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
+	fun queue(dataHTTPEndpointRequest :DataHTTPEndpointRequest, identifier :String = "",
+			priority :Priority = Priority.NORMAL, completionProc :(ByteArray?, Exception?) -> Unit) {
+		// Setup
+		dataHTTPEndpointRequest.completionProc = completionProc
+
+		// Queue
+		queue(dataHTTPEndpointRequest, identifier, priority)
+	}
+
+//	//------------------------------------------------------------------------------------------------------------------
+//	fun queue(fileHTTPEndpointRequest :FileHTTPEndpointRequest, identifier :String = "",
+//			priority :Priority = Priority.NORMAL, completionProc :(ByteArray?, Exception?) -> Unit) {
+//		// Setup
+//		fileHTTPEndpointRequest.completionProc = completionProc
+//
+//		// Queue
+//		queue(fileHTTPEndpointRequest, identifier, priority)
+//	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	fun queue(headHTTPEndpointRequest :HeadHTTPEndpointRequest, identifier :String = "",
+			priority :Priority = Priority.NORMAL, completionProc :(Map<String, String>?, Exception?) -> Unit) {
+		// Setup
+		headHTTPEndpointRequest.completionProc = completionProc
+
+		// Queue
+		queue(headHTTPEndpointRequest, identifier, priority)
+	}
+
+//	//------------------------------------------------------------------------------------------------------------------
+//	fun queue<T :Any>(jsonHTTPEndpointRequest :JSONHTTPEndpointRequest<T :Any>, identifier :String = "",
+//			priority :Priority = Priority.NORMAL, completionProc :(T?, Exception?) -> Unit) {
+//		// Setup
+//		jsonHTTPEndpointRequest.completionProc = completionProc
+//
+//		// Queue
+//		queue(jsonHTTPEndpointRequest, identifier, priority)
+//	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	fun queue(stringHTTPEndpointRequest :StringHTTPEndpointRequest, identifier :String = "",
+			priority :Priority = Priority.NORMAL, completionProc :(String?, Exception?) -> Unit) {
+		// Setup
+		stringHTTPEndpointRequest.completionProc = completionProc
+
+		// Queue
+		queue(stringHTTPEndpointRequest, identifier, priority)
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	fun queue(successHTTPEndpointRequest :SuccessHTTPEndpointRequest, identifier :String = "",
+			priority :Priority = Priority.NORMAL, completionProc :(Exception?) -> Unit) {
+		// Setup
+		successHTTPEndpointRequest.completionProc = completionProc
+
+		// Queue
+		queue(successHTTPEndpointRequest, identifier, priority)
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
 	fun cancel(identifier :String) {
 		// One at a time please...
 		this.updateActiveHTTPEndpointRequestsLock.lock()
