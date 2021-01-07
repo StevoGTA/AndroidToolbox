@@ -4,6 +4,8 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import okhttp3.Response
 import java.net.URLEncoder
 
@@ -11,13 +13,18 @@ import java.net.URLEncoder
 abstract class HTTPEndpointRequest {
 
 	// Types
+	enum class BodyType {
+		JSON,
+		URLENCODED,
+	}
+
 	enum class State {
 		QUEUED,
 		ACTIVE,
 		FINISHED,
 	}
 
-	data class MultiValueQueryComponent(val key :String, val values :List<Any>)
+	data	class MultiValueQueryComponent(val key :String, val values :List<Any>)
 
 	// Properties
 	val	method :HTTPEndpointMethod
@@ -62,34 +69,36 @@ abstract class HTTPEndpointRequest {
 		this.bodyData = bodyData
 	}
 
-//	//------------------------------------------------------------------------------------------------------------------
-//	constructor(method :HTTPEndpointMethod, path :String, queryComponents :Map<String, Any>? = null,
-//			multiValueQueryComponent :MultiValueQueryComponent?, headers :Map<String, String>?, timeoutInterval :Double,
-//			jsonBody :Object) {
-//		// Setup
-//		var	headersUse = if (headers != null) HashMap<String, String>(headers!!) else HashMap<String, String>()
-//		headersUse["application/json"] = "Content-Type"
-//
-//		val moshi = Moshi.Builder().build()
-//		val	jsonString = moshi.adapter(HashMap<String, Any>.class).toJson(jsonBody)
-//
-//		// Store
-//		this.method = method
-//		this.path = path
-//		this.queryComponents = queryComponents
-//		this.multiValueQueryComponent = multiValueQueryComponent
-//		this.headers = headersUse
-//		this.timeoutInterval = timeoutInterval
-//		this.bodyData = bodyData
-//	}
-
 	//------------------------------------------------------------------------------------------------------------------
 	constructor(method :HTTPEndpointMethod, path :String, queryComponents :Map<String, Any>? = null,
 			multiValueQueryComponent :MultiValueQueryComponent?, headers :Map<String, String>?, timeoutInterval :Double,
-			urlEncodedBody :Map<String, Any>) {
+			body :Map<String, Any>, bodyType :BodyType) {
 		// Setup
-		var	headersUse = if (headers != null) HashMap<String, String>(headers) else HashMap<String, String>()
-		headersUse["Content-Type"] = "application/x-www-form-urlencoded"
+		val headersUse = if (headers != null) HashMap<String, String>(headers) else HashMap<String, String>()
+
+		val bodyData :ByteArray
+		when (bodyType) {
+			BodyType.JSON -> {
+				// JSON
+				headersUse["Content-Type"] = "application/json"
+
+				val	moshiBuilder = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
+				val	type = Types.newParameterizedType(Map::class.java, String::class.java, Any::class.java)
+				val json = moshiBuilder.adapter<Map<String, Any>>(type).toJson(body)
+				bodyData = json.toByteArray()
+			}
+
+			BodyType.URLENCODED -> {
+				// URL Encoded
+				headersUse["Content-Type"] = "application/x-www-form-urlencoded"
+
+				bodyData =
+						body
+								.map({ "${it.key}=" + URLEncoder.encode("${it.value}", "utf-8") })
+								.joinToString(separator = "&")
+								.toByteArray()
+			}
+		}
 
 		// Store
 		this.method = method
@@ -98,23 +107,20 @@ abstract class HTTPEndpointRequest {
 		this.multiValueQueryComponent = multiValueQueryComponent
 		this.headers = headersUse
 		this.timeoutInterval = timeoutInterval
-		this.bodyData =
-				urlEncodedBody
-						.map({ "${it.key}=" + URLEncoder.encode("${it.value}", "utf-8") })
-						.joinToString(separator = "&")
-						.toByteArray()
+		this.bodyData = bodyData
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
-	constructor(method :HTTPEndpointMethod, uri :Uri, timeoutInterval :Double) {
+	constructor(method :HTTPEndpointMethod, uri :Uri, headers :Map<String, String>?, timeoutInterval :Double,
+			bodyData :ByteArray?) {
 		// Store
 		this.method = method
 		this.path = uri.toString()
 		this.queryComponents = null
 		this.multiValueQueryComponent = null
-		this.headers = null
+		this.headers = headers
 		this.timeoutInterval = timeoutInterval
-		this.bodyData = null
+		this.bodyData = bodyData
 	}
 
 	// Instance methods
@@ -139,12 +145,13 @@ class DataHTTPEndpointRequest : HTTPEndpointRequest {
 	//------------------------------------------------------------------------------------------------------------------
 	constructor(method :HTTPEndpointMethod, path :String, queryComponents :Map<String, Any>? = null,
 			multiValueQueryComponent :MultiValueQueryComponent? = null, headers :Map<String, String>? = null,
-			timeoutInterval :Double = 0.0) :
+			timeoutInterval :Double = 60.0) :
 		super(method, path, queryComponents, multiValueQueryComponent, headers, timeoutInterval, null)
 
 	//------------------------------------------------------------------------------------------------------------------
-	constructor(uri :Uri, method :HTTPEndpointMethod = HTTPEndpointMethod.GET, timeoutInterval :Double = 0.0) :
-		super(method, uri, timeoutInterval)
+	constructor(method :HTTPEndpointMethod = HTTPEndpointMethod.GET, uri :Uri, headers :Map<String, String>? = null,
+			timeoutInterval :Double = 0.0, bodyData :ByteArray? = null) :
+		super(method, uri, headers, timeoutInterval, bodyData)
 
 	// HTTPEndpointRequest methods
 	//------------------------------------------------------------------------------------------------------------------
@@ -168,7 +175,7 @@ class HeadHTTPEndpointRequest : HTTPEndpointRequest {
 	//------------------------------------------------------------------------------------------------------------------
 	constructor(method :HTTPEndpointMethod, path :String, queryComponents :Map<String, Any>? = null,
 			multiValueQueryComponent :MultiValueQueryComponent? = null, headers :Map<String, String>? = null,
-			timeoutInterval :Double = 0.0) :
+			timeoutInterval :Double = 60.0) :
 		super(method, path, queryComponents, multiValueQueryComponent, headers, timeoutInterval, null)
 
 	// HTTPEndpointRequest methods
@@ -202,8 +209,8 @@ class JSONHTTPEndpointRequest<T :Any> : HTTPEndpointRequest {
 	//------------------------------------------------------------------------------------------------------------------
 	constructor(clazz :Class<T>, method :HTTPEndpointMethod, path :String, queryComponents :Map<String, Any>?,
 			multiValueQueryComponent :MultiValueQueryComponent?, headers :Map<String, String>?, timeoutInterval :Double,
-			urlEncodedBody :Map<String, Any>) :
-			super(method, path, queryComponents, multiValueQueryComponent, headers, timeoutInterval, urlEncodedBody) {
+			body :Map<String, Any>, bodyType :BodyType) :
+			super(method, path, queryComponents, multiValueQueryComponent, headers, timeoutInterval, body, bodyType) {
 		// Store
 		this.clazz = clazz
 	}
@@ -219,8 +226,7 @@ class JSONHTTPEndpointRequest<T :Any> : HTTPEndpointRequest {
 
 			if (response?.body != null) {
 				// Try to create object from response body
-				val moshi = Moshi.Builder().build()
-				val tAdapter = moshi.adapter(this.clazz)
+				val tAdapter = Moshi.Builder().build().adapter(this.clazz)
 
 				try {
 					// Create t
@@ -246,16 +252,17 @@ class JSONHTTPEndpointRequest<T :Any> : HTTPEndpointRequest {
 inline fun <reified T : Any> JSONHTTPEndpointRequest(method :HTTPEndpointMethod, path :String,
 		queryComponents :Map<String, Any>? = null,
 		multiValueQueryComponent :HTTPEndpointRequest.MultiValueQueryComponent? = null,
-		headers :Map<String, String>? = null, timeoutInterval :Double = 0.0, bodyData :ByteArray? = null) =
+		headers :Map<String, String>? = null, timeoutInterval :Double = 60.0, bodyData :ByteArray? = null) =
 	JSONHTTPEndpointRequest(T::class.java, method, path, queryComponents, multiValueQueryComponent, headers,
 			timeoutInterval, bodyData)
 
 inline fun <reified T : Any> JSONHTTPEndpointRequest(method :HTTPEndpointMethod, path :String,
 		queryComponents :Map<String, Any>? = null,
 		multiValueQueryComponent :HTTPEndpointRequest.MultiValueQueryComponent? = null,
-		headers :Map<String, String>? = null, timeoutInterval :Double = 0.0, urlEncodedBody :Map<String, Any>) =
+		headers :Map<String, String>? = null, timeoutInterval :Double = 60.0, body :Map<String, Any>,
+		bodyType :HTTPEndpointRequest.BodyType) =
 	JSONHTTPEndpointRequest(T::class.java, method, path, queryComponents, multiValueQueryComponent, headers,
-			timeoutInterval, urlEncodedBody)
+			timeoutInterval, body, bodyType)
 
 //----------------------------------------------------------------------------------------------------------------------
 class StringHTTPEndpointRequest : HTTPEndpointRequest {
@@ -267,7 +274,7 @@ class StringHTTPEndpointRequest : HTTPEndpointRequest {
 	//------------------------------------------------------------------------------------------------------------------
 	constructor(method :HTTPEndpointMethod, path :String, queryComponents :Map<String, Any>? = null,
 			multiValueQueryComponent :MultiValueQueryComponent? = null, headers :Map<String, String>? = null,
-			timeoutInterval :Double = 0.0) :
+			timeoutInterval :Double = 60.0) :
 		super(method, path, queryComponents, multiValueQueryComponent, headers, timeoutInterval, null)
 
 	// HTTPEndpointRequest methods
@@ -297,7 +304,7 @@ class SuccessHTTPEndpointRequest : HTTPEndpointRequest {
 	//------------------------------------------------------------------------------------------------------------------
 	constructor(method :HTTPEndpointMethod, path :String, queryComponents :Map<String, Any>? = null,
 			multiValueQueryComponent :MultiValueQueryComponent? = null, headers :Map<String, String>? = null,
-			timeoutInterval :Double = 0.0) :
+			timeoutInterval :Double = 60.0) :
 		super(method, path, queryComponents, multiValueQueryComponent, headers, timeoutInterval, null)
 
 	// HTTPEndpointRequest methods

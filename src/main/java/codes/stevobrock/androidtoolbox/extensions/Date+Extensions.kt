@@ -27,14 +27,21 @@ fun dateFromRFC3339(string :String?) :Date? {
 	// Check for null
 	if (string == null) return null
 
-	// Catch errors
-	try {
-		// Try to convert
-		return SimpleDateFormat("yyyy-MM-dd'T'HH:mm:sszzz").parse(string)
-	} catch (e :Exception) {
-		// Invalid string
-		return null
+	// Setup
+	val formats =
+				arrayListOf<String>(
+					"yyyy-MM-dd'T'HH:mm:ssX",
+					"yyyy-MM-dd'T'HH:mm:sszzz",
+				)
+	for (format in formats) {
+		// Catch errors
+		try {
+			// Try to convert
+			return SimpleDateFormat(format).parse(string)
+		} catch (exception :Exception) {}
 	}
+
+	return null
 }
 
 //----------------------------------------------------------------------------------------------------------------------
