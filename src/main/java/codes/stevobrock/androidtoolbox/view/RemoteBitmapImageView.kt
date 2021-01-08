@@ -3,14 +3,15 @@ package codes.stevobrock.androidtoolbox.view
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.AttributeSet
+import android.util.Size
 import codes.stevobrock.androidtoolbox.model.RemoteBitmapRetriever
 
 //----------------------------------------------------------------------------------------------------------------------
 class RemoteBitmapImageView : androidx.appcompat.widget.AppCompatImageView {
 
 	// Properties
-	private				var	t :Any? = null
-	private	lateinit	var	remoteBitmapRetriever :RemoteBitmapRetriever
+	private	var	remoteBitmapRetriever :RemoteBitmapRetriever? = null
+	private	var	identifier :String? = null
 
 	// Lifecycle methods
 	constructor(context :Context) : super(context)
@@ -20,31 +21,43 @@ class RemoteBitmapImageView : androidx.appcompat.widget.AppCompatImageView {
 
 	// Instance methods
 	//------------------------------------------------------------------------------------------------------------------
-	fun setup(t :Any, remoteBitmapRetriever :RemoteBitmapRetriever, defaultBitmap :Bitmap? = null) {
+	fun setup(item :Any, remoteBitmapRetriever :RemoteBitmapRetriever, defaultBitmap :Bitmap? = null,
+			aspectFit :Boolean = true) {
 		// Cleanup if necessary
 		cleanup()
 
-		// Store
-		this.t = t
-		this.remoteBitmapRetriever = remoteBitmapRetriever
+		// Setup
+		val	bitmap = remoteBitmapRetriever.bitmap(item, Size(0, 0), aspectFit)
+		if (bitmap != null)
+			// Have bitmap
+			setImageBitmap(bitmap)
+		else {
+			// Store
+			this.remoteBitmapRetriever = remoteBitmapRetriever
 
-		// Setup UI
-		setImageBitmap(defaultBitmap)
+			// Setup UI
+			setImageBitmap(defaultBitmap)
 
-		// Query bitmap
-		this.remoteBitmapRetriever.queryRemoteBitmap(this.t!!) {
-			// Update UI
-			setImageBitmap(it)
+			// Retrieve bitmap
+			this.identifier =
+					this.remoteBitmapRetriever!!.retrieveRemoteBitmap(item, Size(0, 0), aspectFit)
+							{ bitmap, exception ->
+								// Note that we are loaded
+								this.identifier = null
+
+								// Update UI
+								setImageBitmap(bitmap)
+							}
 		}
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
 	fun cleanup() {
 		// Check if we have a thing
-		if (this.t != null) {
-			// Cancel any remote bitmap query that is in-flight.
-			this.remoteBitmapRetriever.cancelQueryRemoteBitmap(this.t!!)
-			this.t = null
+		if (this.identifier != null) {
+			// Cancel in-flight
+			this.remoteBitmapRetriever!!.cancelRetrieveRemoteBitmap(this.identifier!!)
+			this.identifier = null
 		}
 	}
 }
