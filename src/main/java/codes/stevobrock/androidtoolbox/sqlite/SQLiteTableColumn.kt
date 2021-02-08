@@ -52,6 +52,8 @@ class SQLiteTableColumn(val name :String, val kind :Kind, val options :Int, val 
 					// Switch self
 					when (this) {
 						TEXT ->	return true
+						DATE_ISO8601_FRACTIONAL_SECONDS_AUTO_SET -> return true
+						DATE_ISO8601_FRACTIONAL_SECONDS_AUTO_UPDATE -> return true
 						else ->	return false
 					}
 				}

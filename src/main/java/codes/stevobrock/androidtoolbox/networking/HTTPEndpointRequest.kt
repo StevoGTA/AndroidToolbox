@@ -95,7 +95,7 @@ abstract class HTTPEndpointRequest {
 				bodyData =
 						body
 								.map({ "${it.key}=" + URLEncoder.encode("${it.value}", "utf-8") })
-								.joinToString(separator = "&")
+								.joinToString("&")
 								.toByteArray()
 			}
 		}
@@ -185,6 +185,36 @@ class HeadHTTPEndpointRequest : HTTPEndpointRequest {
 		if (!this.isCancelled)
 			// Call completion proc
 			this.completionProc(response?.headers?.toMap(), exception)
+	}
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+class IntegerHTTPEndpointRequest : HTTPEndpointRequest {
+
+	// Properties
+	var	completionProc :(Int?, Exception?) -> Unit = { _,_ -> }
+
+	// Lifecycle methods
+	//------------------------------------------------------------------------------------------------------------------
+	constructor(method :HTTPEndpointMethod, path :String, queryComponents :Map<String, Any>? = null,
+			multiValueQueryComponent :MultiValueQueryComponent? = null, headers :Map<String, String>? = null,
+			timeoutInterval :Double = 60.0) :
+		super(method, path, queryComponents, multiValueQueryComponent, headers, timeoutInterval, null)
+
+	// HTTPEndpointRequest methods
+	//------------------------------------------------------------------------------------------------------------------
+	override fun processResults(response :Response?, exception :Exception?) {
+		// Check if cancelled
+		if (!this.isCancelled) {
+			// Handle results
+			val byteArray = response?.body?.bytes()
+			if (byteArray != null)
+				// Call completion
+				this.completionProc(byteArray.toString(Charsets.UTF_8).toInt(), null)
+			else
+				// Error
+				this.completionProc(null, exception)
+		}
 	}
 }
 

@@ -8,18 +8,18 @@ import codes.stevobrock.androidtoolbox.concurrency.LockingHashMap
 // SQLiteStatement
 class SQLiteStatement(private val string :String, private val values :List<Any>? = null,
 		private val lastInsertRowIDProc :((lastInsertRowID: Long) -> Unit)? = null,
-		private val processValuesProc :SQLiteResultsRowProcessValuesProc? = null) {
+		private val resultsRowProc :SQLiteResultsRowProc? = null) {
 
 	// Instance methods
 	//------------------------------------------------------------------------------------------------------------------
 	fun perform(database: SQLiteDatabase) {
 		// Perform
-		if (this.processValuesProc != null) {
+		if (this.resultsRowProc != null) {
 			// Perform as query
 			val	resultsRow = SQLiteResultsRow(database.rawQuery(this.string, null))
 			if (resultsRow.moveToFirst()) {
 				// Iterate all rows
-				do { this.processValuesProc(resultsRow) } while (resultsRow.moveToNext())
+				do { this.resultsRowProc!!(resultsRow) } while (resultsRow.moveToNext())
 			}
 			resultsRow.close()
 		} else {
@@ -34,7 +34,7 @@ class SQLiteStatement(private val string :String, private val values :List<Any>?
 
 			if (this.lastInsertRowIDProc != null)
 				// Perform as insert
-				this.lastInsertRowIDProc(statement.executeInsert())
+				this.lastInsertRowIDProc!!(statement.executeInsert())
 			else
 				// Perform
 				statement.execute()
@@ -76,11 +76,11 @@ class SQLiteStatementPerformer(private val database :SQLiteDatabase) {
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
-	fun perform(statement :String, values :List<Any>? = null, processValuesProc :SQLiteResultsRowProcessValuesProc) {
+	fun perform(statement :String, values :List<Any>? = null, resultsRowProc :SQLiteResultsRowProc) {
 		// Perform
 		synchronized(this.lock) {
 			// Perform statement
-			SQLiteStatement(statement, values, processValuesProc = processValuesProc).perform(this.database)
+			SQLiteStatement(statement, values, resultsRowProc = resultsRowProc).perform(this.database)
 		}
 	}
 

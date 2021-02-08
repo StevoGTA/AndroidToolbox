@@ -79,6 +79,16 @@ open class HTTPEndpointClient(private val scheme :String, private val authority 
 		queue(headHTTPEndpointRequest, identifier, priority)
 	}
 
+	//------------------------------------------------------------------------------------------------------------------
+	fun queue(integerHTTPEndpointRequest :IntegerHTTPEndpointRequest, identifier :String = "",
+			priority :Priority = Priority.NORMAL, completionProc :(Int?, Exception?) -> Unit) {
+		// Setup
+		integerHTTPEndpointRequest.completionProc = completionProc
+
+		// Queue
+		queue(integerHTTPEndpointRequest, identifier, priority)
+	}
+
 //	//------------------------------------------------------------------------------------------------------------------
 //	fun queue<T :Any>(jsonHTTPEndpointRequest :JSONHTTPEndpointRequest<T :Any>, identifier :String = "",
 //			priority :Priority = Priority.NORMAL, completionProc :(T?, Exception?) -> Unit) {

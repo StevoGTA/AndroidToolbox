@@ -5,7 +5,7 @@ import java.lang.Exception
 
 //----------------------------------------------------------------------------------------------------------------------
 // Types
-typealias SQLiteResultsRowProcessValuesProc = (resultsRow :SQLiteResultsRow) -> Unit
+typealias SQLiteResultsRowProc = (resultsRow :SQLiteResultsRow) -> Unit
 
 //----------------------------------------------------------------------------------------------------------------------
 // SQLiteResultsRow

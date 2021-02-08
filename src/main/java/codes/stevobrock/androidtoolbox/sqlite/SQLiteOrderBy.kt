@@ -19,6 +19,6 @@ class SQLiteOrderBy {
 		this.string =
 				" ORDER BY " +
 						(if (table != null) "`$table!.name`.`$tableColumn.name`" else "`$tableColumn.name`") +
-						(if (order == Order.ASCENDING) "ASC" else "DESC")
+						(if (order == Order.ASCENDING) " ASC" else " DESC")
 	}
 }

@@ -32,9 +32,9 @@ class SQLiteWhere {
 
 	// Instance methods
 	//------------------------------------------------------------------------------------------------------------------
-	fun forEachValueGroup(chunkSize :Int, proc :(string :String, values :List<Any>) -> Unit) {
+	fun forEachValueGroup(groupSize :Int, proc :(string :String, values :List<Any>) -> Unit) {
 		// Chunk values
-		this.values.forEachChunk(chunkSize) {
+		this.values.forEachChunk(groupSize) {
 			// Call proc
 			proc(
 					this.string.replace(SQLiteWhere.variablePlaceholder,
