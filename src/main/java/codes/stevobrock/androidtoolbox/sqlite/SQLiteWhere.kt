@@ -8,7 +8,7 @@ class SQLiteWhere {
 	// Properties
 	var	string :String
 		private set
-	var	values :ArrayList<Any>
+	var	values :ArrayList<ArrayList<Any>>?
 		private set
 
 	// Lifecycle methods
@@ -17,7 +17,8 @@ class SQLiteWhere {
 			value :Any? = null) {
 		// Setup
 		this.string = " WHERE " + (if (table != null) "`$table!.name`.`$tableColumn.name`" else "`$tableColumn.name`")
-		this.values = ArrayList()
+		this.values = null
+
 		append(comparison, value)
 	}
 
@@ -27,20 +28,62 @@ class SQLiteWhere {
 		this.string =
 				" WHERE " + (if (table != null) "`$table!.name`.`$tableColumn.name`" else "`$tableColumn.name`") +
 						" IN (" + SQLiteWhere.variablePlaceholder + ")"
-		this.values = ArrayList(values)
+
+		this.values = ArrayList()
+		this.values!!.add(ArrayList(values))
 	}
 
 	// Instance methods
 	//------------------------------------------------------------------------------------------------------------------
 	fun forEachValueGroup(groupSize :Int, proc :(string :String, values :List<Any>) -> Unit) {
-		// Chunk values
-		this.values.forEachChunk(groupSize) {
-			// Call proc
-			proc(
-					this.string.replace(SQLiteWhere.variablePlaceholder,
-							Array(it.count()) { "?" }.joinToString(",")),
-					it)
- 		}
+		// Check if need to group
+		if (!this.string.contains(variablePlaceholder))
+			// Perform
+			proc(this.string, this.values ?: arrayListOf())
+		else {
+			// Group
+			var	preValueGroupValues = ArrayList<Any>()
+			var	valueGroup = ArrayList<Any>()
+			var postValueGroupValues = ArrayList<Any>()
+			(this.values ?: arrayListOf()).forEach() {
+				// Check count
+				if (it.size == 1) {
+					// Single value
+					if (valueGroup.isEmpty())
+						// Pre
+						preValueGroupValues.addAll(it)
+					else
+						// Post
+						postValueGroupValues.addAll(it)
+				} else
+					// Value group
+					valueGroup = it
+			}
+
+			// Check if need to group
+			val	allValues = preValueGroupValues + valueGroup + postValueGroupValues
+			if (allValues.size <= groupSize)
+				// Can perform as a single group
+				proc(
+						this.string
+								.replace(variablePlaceholder,
+										Array(allValues.size.coerceAtLeast(1)) { "?" }
+								.joinToString(",")),
+						allValues)
+			else
+				// Must perform in groups
+				valueGroup.forEachChunk(groupSize - preValueGroupValues.size - postValueGroupValues.size) {
+					// Setup
+					val	values = preValueGroupValues + it + postValueGroupValues
+
+					// Call proc
+					proc(
+							this.string
+									.replace(variablePlaceholder, Array(it.size) { "?" }
+									.joinToString(",")),
+							values)
+				}
+		}
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -59,7 +102,9 @@ class SQLiteWhere {
 		this.string +=
 				" WHERE " + (if (table != null) "`$table!.name`.`$tableColumn.name=`" else "`$tableColumn.name`") +
 						" IN (" + SQLiteWhere.variablePlaceholder + ")"
-		this.values = ArrayList(values)
+
+		if (this.values == null) this.values = ArrayList()
+		this.values!!.add(ArrayList(values))
 
 		return this
 	}
@@ -93,7 +138,9 @@ class SQLiteWhere {
 		} else {
 			// Actual value
 			this.string += " $comparison ?"
-			this.values.add(value)
+
+			if (this.values == null) this.values = ArrayList()
+			this.values!!.add(arrayListOf(value))
 		}
 	}
 

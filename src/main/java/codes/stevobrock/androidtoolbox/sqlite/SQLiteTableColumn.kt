@@ -5,7 +5,8 @@ import codes.stevobrock.androidtoolbox.sqlite.SQLiteTableColumn.Options.Companio
 
 //----------------------------------------------------------------------------------------------------------------------
 // SQLiteTableColumnReference
-typealias SQLiteTableColumnReference = Triple<SQLiteTableColumn, SQLiteTable, SQLiteTableColumn>
+data class SQLiteTableColumnReference(val tableColumn :SQLiteTableColumn, val referencedTable :SQLiteTable,
+			val referencedTableColumn :SQLiteTableColumn)
 
 //----------------------------------------------------------------------------------------------------------------------
 // SQLiteTableColumn

@@ -17,12 +17,12 @@ class SQLiteTrigger {
 
 	// Instance methods
 	//------------------------------------------------------------------------------------------------------------------
-	fun string(forTableName :String) :String {
+	fun string(table :SQLiteTable) :String {
 		// Return string
-		return "CREATE TRIGGER $this.updateTableColumn.name" + "Trigger" +
-				" AFTER UPDATE ON $forTableName" +
+		return "CREATE TRIGGER `${table.name}-${this.updateTableColumn.name}Trigger`" +
+				" AFTER UPDATE ON ${table.name}" +
 				" FOR EACH ROW" +
-				" BEGIN UPDATE $forTableName" +
+				" BEGIN UPDATE ${table.name}" +
 				" SET $this.updateTableColumn.name=$this.updateTableColumn.defaultValue!" +
 				" WHERE $this.comparisonTableColumn.name=NEW.$this.comparisonTableColumn.name;" +
 				" END"

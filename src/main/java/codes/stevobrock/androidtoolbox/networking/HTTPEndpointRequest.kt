@@ -1,8 +1,7 @@
 package codes.stevobrock.androidtoolbox.networking
 
 import android.net.Uri
-import android.os.Handler
-import android.os.Looper
+import codes.stevobrock.androidtoolbox.concurrency.LockingInt
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
@@ -44,7 +43,7 @@ abstract class HTTPEndpointRequest {
 //	//------------------------------------------------------------------------------------------------------------------
 //	constructor(method :HTTPEndpointMethod, path :String, queryComponents :Map<String, Any>?,
 //			multiValueQueryComponent :MultiValueQueryComponent?, headers :Map<String, String>,
-//			timeoutInterval :Double) {
+//			timeoutInterval :Double = defaultTimeout) {
 //		// Store
 //		this.method = method
 //		this.path = path
@@ -57,8 +56,8 @@ abstract class HTTPEndpointRequest {
 
 	//------------------------------------------------------------------------------------------------------------------
 	constructor(method :HTTPEndpointMethod, path :String, queryComponents :Map<String, Any>?,
-			multiValueQueryComponent :MultiValueQueryComponent?, headers :Map<String, String>?, timeoutInterval :Double,
-			bodyData :ByteArray?) {
+			multiValueQueryComponent :MultiValueQueryComponent?, headers :Map<String, String>?,
+			timeoutInterval :Double = defaultTimeout, bodyData :ByteArray?) {
 		// Store
 		this.method = method
 		this.path = path
@@ -71,8 +70,8 @@ abstract class HTTPEndpointRequest {
 
 	//------------------------------------------------------------------------------------------------------------------
 	constructor(method :HTTPEndpointMethod, path :String, queryComponents :Map<String, Any>? = null,
-			multiValueQueryComponent :MultiValueQueryComponent?, headers :Map<String, String>?, timeoutInterval :Double,
-			body :Map<String, Any>, bodyType :BodyType) {
+			multiValueQueryComponent :MultiValueQueryComponent?, headers :Map<String, String>?,
+			timeoutInterval :Double = defaultTimeout, body :Map<String, Any>, bodyType :BodyType) {
 		// Setup
 		val headersUse = if (headers != null) HashMap<String, String>(headers) else HashMap<String, String>()
 
@@ -111,8 +110,8 @@ abstract class HTTPEndpointRequest {
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
-	constructor(method :HTTPEndpointMethod, uri :Uri, headers :Map<String, String>?, timeoutInterval :Double,
-			bodyData :ByteArray?) {
+	constructor(method :HTTPEndpointMethod, uri :Uri, headers :Map<String, String>?,
+			timeoutInterval :Double = defaultTimeout, bodyData :ByteArray?) {
 		// Store
 		this.method = method
 		this.path = uri.toString()
@@ -130,78 +129,106 @@ abstract class HTTPEndpointRequest {
 	//------------------------------------------------------------------------------------------------------------------
 	fun transitionToState(state :State) { this.state = state }
 
-	// Subclass methods
+	// Companion object
 	//------------------------------------------------------------------------------------------------------------------
-	abstract fun processResults(response :Response?, exception :Exception?)
+	companion object {
+		// Properties
+		var	defaultTimeout :Double = 60.0
+	}
+
+	// Private classes
+	//------------------------------------------------------------------------------------------------------------------
+	class UnableToProcessResponseDataException : Exception()
 }
 
 //----------------------------------------------------------------------------------------------------------------------
-class DataHTTPEndpointRequest : HTTPEndpointRequest {
+interface HTTPEndpointRequestProcessResults {
+
+	// Methods
+	fun processResults(response :Response?, exception :Exception?)
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+interface HTTPEndpointRequestProcessMultiResults {
+
+	// Methods
+	fun processResults(response :Response?, exception :Exception?, totalRequests :Int)
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+typealias DataHTTPEndpointRequestCompletionProc = (response :Response?, data :ByteArray?, exception :Exception?) -> Unit
+
+class DataHTTPEndpointRequest : HTTPEndpointRequest, HTTPEndpointRequestProcessResults {
 
 	// Properties
-	var	completionProc :(ByteArray?, Exception?) -> Unit = { _,_ -> }
+	var	completionProc :DataHTTPEndpointRequestCompletionProc = { _,_,_ -> }
 
 	// Lifecycle methods
 	//------------------------------------------------------------------------------------------------------------------
 	constructor(method :HTTPEndpointMethod, path :String, queryComponents :Map<String, Any>? = null,
 			multiValueQueryComponent :MultiValueQueryComponent? = null, headers :Map<String, String>? = null,
-			timeoutInterval :Double = 60.0) :
+			timeoutInterval :Double = defaultTimeout) :
 		super(method, path, queryComponents, multiValueQueryComponent, headers, timeoutInterval, null)
 
 	//------------------------------------------------------------------------------------------------------------------
 	constructor(method :HTTPEndpointMethod = HTTPEndpointMethod.GET, uri :Uri, headers :Map<String, String>? = null,
-			timeoutInterval :Double = 0.0, bodyData :ByteArray? = null) :
+			timeoutInterval :Double = defaultTimeout, bodyData :ByteArray? = null) :
 		super(method, uri, headers, timeoutInterval, bodyData)
 
-	// HTTPEndpointRequest methods
+	// HTTPEndpointRequestProcessResults methods
 	//------------------------------------------------------------------------------------------------------------------
 	override fun processResults(response :Response?, exception :Exception?) {
 		// Check if cancelled
 		if (!this.isCancelled)
 			// Call completion proc
-			this.completionProc(response?.body?.bytes(), exception)
+			this.completionProc(response, response?.body?.bytes(), exception)
 	}
 }
 
 // TODO: FileHTTPEndpointRequest
 
 //----------------------------------------------------------------------------------------------------------------------
-class HeadHTTPEndpointRequest : HTTPEndpointRequest {
+typealias HeadHTTPEndpointRequestCompletionProc = (response :Response?, exception :Exception?) -> Unit
+
+class HeadHTTPEndpointRequest : HTTPEndpointRequest, HTTPEndpointRequestProcessResults {
 
 	// Properties
-	var	completionProc :(Map<String, String>?, Exception?) -> Unit = { _,_ -> }
+	var	completionProc :HeadHTTPEndpointRequestCompletionProc = { _,_ -> }
 
 	// Lifecycle methods
 	//------------------------------------------------------------------------------------------------------------------
 	constructor(method :HTTPEndpointMethod, path :String, queryComponents :Map<String, Any>? = null,
 			multiValueQueryComponent :MultiValueQueryComponent? = null, headers :Map<String, String>? = null,
-			timeoutInterval :Double = 60.0) :
+			timeoutInterval :Double = defaultTimeout) :
 		super(method, path, queryComponents, multiValueQueryComponent, headers, timeoutInterval, null)
 
-	// HTTPEndpointRequest methods
+	// HTTPEndpointRequestProcessResults methods
 	//------------------------------------------------------------------------------------------------------------------
 	override fun processResults(response :Response?, exception :Exception?) {
 		// Check if cancelled
 		if (!this.isCancelled)
 			// Call completion proc
-			this.completionProc(response?.headers?.toMap(), exception)
+			// To get headers, use response?.headers?.toMap()
+			this.completionProc(response, exception)
 	}
 }
 
 //----------------------------------------------------------------------------------------------------------------------
-class IntegerHTTPEndpointRequest : HTTPEndpointRequest {
+typealias IntegerHTTPEndpointRequestCompletionProc = (response :Response?, value :Int?, exception :Exception?) -> Unit
+
+class IntegerHTTPEndpointRequest : HTTPEndpointRequest, HTTPEndpointRequestProcessResults {
 
 	// Properties
-	var	completionProc :(Int?, Exception?) -> Unit = { _,_ -> }
+	var	completionProc :IntegerHTTPEndpointRequestCompletionProc = { _,_,_ -> }
 
 	// Lifecycle methods
 	//------------------------------------------------------------------------------------------------------------------
 	constructor(method :HTTPEndpointMethod, path :String, queryComponents :Map<String, Any>? = null,
 			multiValueQueryComponent :MultiValueQueryComponent? = null, headers :Map<String, String>? = null,
-			timeoutInterval :Double = 60.0) :
+			timeoutInterval :Double = defaultTimeout) :
 		super(method, path, queryComponents, multiValueQueryComponent, headers, timeoutInterval, null)
 
-	// HTTPEndpointRequest methods
+	// HTTPEndpointRequestProcessResults methods
 	//------------------------------------------------------------------------------------------------------------------
 	override fun processResults(response :Response?, exception :Exception?) {
 		// Check if cancelled
@@ -210,27 +237,37 @@ class IntegerHTTPEndpointRequest : HTTPEndpointRequest {
 			val byteArray = response?.body?.bytes()
 			if (byteArray != null)
 				// Call completion
-				this.completionProc(byteArray.toString(Charsets.UTF_8).toInt(), null)
+				this.completionProc(response, byteArray.toString(Charsets.UTF_8).toInt(), null)
 			else
 				// Error
-				this.completionProc(null, exception)
+				this.completionProc(response, null, exception)
 		}
 	}
 }
 
 //----------------------------------------------------------------------------------------------------------------------
-class JSONHTTPEndpointRequest<T :Any> : HTTPEndpointRequest {
+typealias JSONHTTPEndpointRequestSingleResponseCompletionProc<T> =
+			(response :Response?, info :T?, exception :Exception?) -> Unit
+typealias JSONHTTPEndpointRequestMultiResponsePartialResultsProc<T> =
+			(response :Response?, info :T?, exception :Exception?) -> Unit
+typealias JSONHTTPEndpointRequestMultiResponseCompletionProc = (exceptions :ArrayList<Exception>) -> Unit
+
+class JSONHTTPEndpointRequest<T :Any> : HTTPEndpointRequest, HTTPEndpointRequestProcessMultiResults {
 
 	// Properties
-			var	completionProc :(T?, Exception?) -> Unit = { _,_ -> }
+			var	completionProc :JSONHTTPEndpointRequestSingleResponseCompletionProc<T>? = null
+			var	multiResponsePartialResultsProc :JSONHTTPEndpointRequestMultiResponsePartialResultsProc<T>? = null
+			var	multiResponseCompletionProc :JSONHTTPEndpointRequestMultiResponseCompletionProc? = null
 
 	private	val	clazz :Class<T>
+	private	val completedRequestsCount = LockingInt()
+	private	val exceptions = ArrayList<Exception>()
 
 	// Lifecycle methods
 	//------------------------------------------------------------------------------------------------------------------
 	constructor(clazz :Class<T>, method :HTTPEndpointMethod, path :String, queryComponents :Map<String, Any>?,
-			multiValueQueryComponent :MultiValueQueryComponent?, headers :Map<String, String>?, timeoutInterval :Double,
-			bodyData :ByteArray?) :
+			multiValueQueryComponent :MultiValueQueryComponent?, headers :Map<String, String>?,
+			timeoutInterval :Double = defaultTimeout, bodyData :ByteArray?) :
 			super(method, path, queryComponents, multiValueQueryComponent, headers, timeoutInterval, bodyData) {
 		// Store
 		this.clazz = clazz
@@ -238,21 +275,21 @@ class JSONHTTPEndpointRequest<T :Any> : HTTPEndpointRequest {
 
 	//------------------------------------------------------------------------------------------------------------------
 	constructor(clazz :Class<T>, method :HTTPEndpointMethod, path :String, queryComponents :Map<String, Any>?,
-			multiValueQueryComponent :MultiValueQueryComponent?, headers :Map<String, String>?, timeoutInterval :Double,
-			body :Map<String, Any>, bodyType :BodyType) :
+			multiValueQueryComponent :MultiValueQueryComponent?, headers :Map<String, String>?,
+			timeoutInterval :Double = defaultTimeout, body :Map<String, Any>, bodyType :BodyType) :
 			super(method, path, queryComponents, multiValueQueryComponent, headers, timeoutInterval, body, bodyType) {
 		// Store
 		this.clazz = clazz
 	}
 
-	// HTTPEndpointRequest methods
+	// HTTPEndpointRequestProcessMultiResults methods
 	//------------------------------------------------------------------------------------------------------------------
-	override fun processResults(response :Response?, exception :Exception?) {
+	override fun processResults(response :Response?, exception :Exception?, totalRequests :Int) {
 		// Check if cancelled
 		if (!this.isCancelled) {
 			// Handle results
 			var t :T? = null
-			var exceptionUse = exception
+			var procException = exception
 
 			if (response?.body != null) {
 				// Try to create object from response body
@@ -262,15 +299,36 @@ class JSONHTTPEndpointRequest<T :Any> : HTTPEndpointRequest {
 					// Create t
 					t = tAdapter.fromJson(response.body!!.source())
 					if (t == null)
-						exceptionUse = UnableToDecodeJSONException()
+						procException = UnableToDecodeJSONException()
 				} catch (e :Exception) {
 					// Error
-					exceptionUse = e
+					procException = e
 				}
-			}
+			} else
+				// Error
+				procException = exception
 
-			// Call completion on the main thread
-			Handler(Looper.getMainLooper()).post(Runnable { this.completionProc(t, exceptionUse) })
+			// Check error
+			if (procException != null) this.exceptions += procException
+
+			// Call proc
+			if (totalRequests == 1) {
+				// Single request (but could have been multiple)
+				if (this.completionProc != null)
+					// Single response expected
+					this.completionProc!!(response, t, procException)
+				else {
+					// Multi-response possible
+					this.multiResponsePartialResultsProc!!(response, t, procException)
+					this.multiResponseCompletionProc!!(this.exceptions)
+				}
+			} else {
+				// Multiple requests
+				this.multiResponsePartialResultsProc!!(response, t, procException)
+				if (this.completedRequestsCount.add(1) == totalRequests)
+					// All done
+					this.multiResponseCompletionProc!!(this.exceptions)
+			}
 		}
 	}
 
@@ -282,32 +340,36 @@ class JSONHTTPEndpointRequest<T :Any> : HTTPEndpointRequest {
 inline fun <reified T : Any> JSONHTTPEndpointRequest(method :HTTPEndpointMethod, path :String,
 		queryComponents :Map<String, Any>? = null,
 		multiValueQueryComponent :HTTPEndpointRequest.MultiValueQueryComponent? = null,
-		headers :Map<String, String>? = null, timeoutInterval :Double = 60.0, bodyData :ByteArray? = null) =
+		headers :Map<String, String>? = null, timeoutInterval :Double = HTTPEndpointRequest.defaultTimeout,
+		bodyData :ByteArray? = null) =
 	JSONHTTPEndpointRequest(T::class.java, method, path, queryComponents, multiValueQueryComponent, headers,
 			timeoutInterval, bodyData)
 
 inline fun <reified T : Any> JSONHTTPEndpointRequest(method :HTTPEndpointMethod, path :String,
 		queryComponents :Map<String, Any>? = null,
 		multiValueQueryComponent :HTTPEndpointRequest.MultiValueQueryComponent? = null,
-		headers :Map<String, String>? = null, timeoutInterval :Double = 60.0, body :Map<String, Any>,
-		bodyType :HTTPEndpointRequest.BodyType) =
+		headers :Map<String, String>? = null, timeoutInterval :Double = HTTPEndpointRequest.defaultTimeout,
+		body :Map<String, Any>, bodyType :HTTPEndpointRequest.BodyType) =
 	JSONHTTPEndpointRequest(T::class.java, method, path, queryComponents, multiValueQueryComponent, headers,
 			timeoutInterval, body, bodyType)
 
 //----------------------------------------------------------------------------------------------------------------------
-class StringHTTPEndpointRequest : HTTPEndpointRequest {
+typealias StringHTTPEndpointRequestCompletionProc =
+			(response :Response?, string :String?, exception :Exception?) -> Unit
+
+class StringHTTPEndpointRequest : HTTPEndpointRequest, HTTPEndpointRequestProcessResults {
 
 	// Properties
-	var	completionProc :(String?, Exception?) -> Unit = { _,_ -> }
+	var	completionProc :StringHTTPEndpointRequestCompletionProc = { _,_,_ -> }
 
 	// Lifecycle methods
 	//------------------------------------------------------------------------------------------------------------------
 	constructor(method :HTTPEndpointMethod, path :String, queryComponents :Map<String, Any>? = null,
 			multiValueQueryComponent :MultiValueQueryComponent? = null, headers :Map<String, String>? = null,
-			timeoutInterval :Double = 60.0) :
+			timeoutInterval :Double = defaultTimeout) :
 		super(method, path, queryComponents, multiValueQueryComponent, headers, timeoutInterval, null)
 
-	// HTTPEndpointRequest methods
+	// HTTPEndpointRequestProcessResults methods
 	//------------------------------------------------------------------------------------------------------------------
 	override fun processResults(response :Response?, exception :Exception?) {
 		// Check if cancelled
@@ -316,33 +378,35 @@ class StringHTTPEndpointRequest : HTTPEndpointRequest {
 			val byteArray = response?.body?.bytes()
 			if (byteArray != null)
 				// Call completion
-				this.completionProc(byteArray.toString(Charsets.UTF_8), null)
+				this.completionProc(response, byteArray.toString(Charsets.UTF_8), null)
 			else
 				// Error
-				this.completionProc(null, exception)
+				this.completionProc(response, null, exception)
 		}
 	}
 }
 
 //----------------------------------------------------------------------------------------------------------------------
-class SuccessHTTPEndpointRequest : HTTPEndpointRequest {
+typealias SuccessHTTPEndpointRequestCompletionProc = (response :Response?, exception :Exception?) -> Unit
+
+class SuccessHTTPEndpointRequest : HTTPEndpointRequest, HTTPEndpointRequestProcessResults {
 
 	// Properties
-	var	completionProc :(Exception?) -> Unit = { _ -> }
+	var	completionProc :SuccessHTTPEndpointRequestCompletionProc = { _,_ -> }
 
 	// Lifecycle methods
 	//------------------------------------------------------------------------------------------------------------------
 	constructor(method :HTTPEndpointMethod, path :String, queryComponents :Map<String, Any>? = null,
 			multiValueQueryComponent :MultiValueQueryComponent? = null, headers :Map<String, String>? = null,
-			timeoutInterval :Double = 60.0) :
+			timeoutInterval :Double = defaultTimeout) :
 		super(method, path, queryComponents, multiValueQueryComponent, headers, timeoutInterval, null)
 
-	// HTTPEndpointRequest methods
+	// HTTPEndpointRequestProcessResults methods
 	//------------------------------------------------------------------------------------------------------------------
 	override fun processResults(response :Response?, exception :Exception?) {
 		// Check if cancelled
 		if (!this.isCancelled)
 			// Call completion proc
-			this.completionProc(exception)
+			this.completionProc(response, exception)
 	}
 }

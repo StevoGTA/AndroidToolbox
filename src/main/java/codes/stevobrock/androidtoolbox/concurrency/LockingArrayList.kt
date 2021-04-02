@@ -21,6 +21,9 @@ class LockingArrayList<T> {
 	fun add(t :T) :LockingArrayList<T> { this.lock.write() { this.arrayList.add(t) }; return this }
 
 	//------------------------------------------------------------------------------------------------------------------
+	fun add(ts :List<T>) :LockingArrayList<T> { this.lock.write() { this.arrayList.addAll(ts) }; return this }
+
+	//------------------------------------------------------------------------------------------------------------------
 	fun forEach(action :(T) -> Unit) {
 		// Perform
 		this.lock.read() {

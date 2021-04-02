@@ -52,8 +52,8 @@ val	SQLiteTableColumn.createString :String get() {
 
 //----------------------------------------------------------------------------------------------------------------------
 // Types
-typealias SQLiteTableAndTableColumn = Pair<SQLiteTable, SQLiteTableColumn>
-typealias SQLiteTableColumnAndValue = Pair<SQLiteTableColumn, Any>
+data class SQLiteTableAndTableColumn(val table :SQLiteTable, val tableColumn :SQLiteTableColumn)
+data class SQLiteTableColumnAndValue(val tableColumn :SQLiteTableColumn, val value :Any)
 
 //----------------------------------------------------------------------------------------------------------------------
 // SQLiteTable
@@ -91,7 +91,7 @@ class SQLiteTable {
 
 		// Setup
 		tableColumns.forEach() { this.tableColumnsMap[it.name + "TableColumn"] = it }
-		references.forEach() { this.tableColumnReferenceMap[it.first.name] = it }
+		references.forEach() { this.tableColumnReferenceMap[it.tableColumn.name] = it }
 	}
 
 	// Property methods
@@ -112,8 +112,8 @@ class SQLiteTable {
 						if (tableColumnReference != null)
 							// Add reference
 							columnInfo +=
-									" REFERENCES " + tableColumnReference.second.name +
-											"(" + tableColumnReference.third.name + ") ON UPDATE CASCADE"
+									" REFERENCES " + tableColumnReference.referencedTable.name +
+											"(" + tableColumnReference.referencedTableColumn.name + ") ON UPDATE CASCADE"
 
 						columnInfo
 					}
@@ -149,7 +149,13 @@ class SQLiteTable {
 	//------------------------------------------------------------------------------------------------------------------
 	fun add(trigger :SQLiteTrigger) {
 		// Perform
-		this.statementPerformer.addToTransactionOrPerform(trigger.string(this.name))
+		this.statementPerformer.addToTransactionOrPerform(trigger.string(this))
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	fun drop(triggerName :String) {
+		// Perform
+		this.statementPerformer.addToTransactionOrPerform("DROP TRIGGER $triggerName")
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -159,17 +165,16 @@ class SQLiteTable {
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
-	fun hasRow(where :SQLiteWhere) :Boolean { return count(where) > 0 }
+	fun hasRow(where :SQLiteWhere) :Boolean { return count(where = where) > 0 }
 
 	//------------------------------------------------------------------------------------------------------------------
-	fun count(where :SQLiteWhere? = null) :Int {
+	fun count(innerJoin: SQLiteInnerJoin? = null, where :SQLiteWhere? = null) :Int {
 		// Perform
 		var	count = 0
-		this.statementPerformer.perform("SELECT COUNT(*) FROM `$this.name`" + (where?.string ?: ""),
-				where?.values) {
-					// Query count
-					count = it.integer(countAllTableColumn)!!
-				}
+		selectTableColumns(listOf(countAllTableColumn), innerJoin, where) {
+			// Query count
+			count = it.integer(countAllTableColumn)!!
+		}
 
 		return count
 	}
@@ -187,8 +192,8 @@ class SQLiteTable {
 	fun selectTableColumns(tableColumns :List<SQLiteTableColumn>? = null, innerJoin :SQLiteInnerJoin? = null,
 			where :SQLiteWhere? = null, orderBy :SQLiteOrderBy? = null, resultsRowProc :SQLiteResultsRowProc) {
 		// Perform
-		select(if (tableColumns != null) columnNamesFromTableColumns(tableColumns) else "*", innerJoin, where, orderBy,
-				resultsRowProc)
+		select(columnNamesFromTableColumns(tableColumns ?: listOf(SQLiteTableColumn.all)), innerJoin,
+				where, orderBy, resultsRowProc)
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -210,11 +215,11 @@ class SQLiteTable {
 	//------------------------------------------------------------------------------------------------------------------
 	fun insertRow(info :List<SQLiteTableColumnAndValue>, lastInsertRowIDProc :(lastInsertRowID :Long) -> Unit) {
 		// Setup
-		val tableColumns = info.map() { it.first }
+		val tableColumns = info.map() { it.tableColumn }
 		val	statement =
 					"INSERT INTO `$this.name` (" + columnNamesFromTableColumns(tableColumns) + ") VALUES (" +
 							Array(info.size) { "?" }.joinToString(",") + ")"
-		val	values = info.map() { it.second }
+		val	values = info.map() { it.value }
 
 		// Perform
 		this.statementPerformer.addToTransactionOrPerform(statement, values, lastInsertRowIDProc)
@@ -233,11 +238,11 @@ class SQLiteTable {
 	fun insertOrReplaceRow(info :List<SQLiteTableColumnAndValue>,
 			lastInsertRowIDProc :(lastInsertRowID :Long) -> Unit) {
 		// Setup
-		val tableColumns = info.map() { it.first }
+		val tableColumns = info.map() { it.tableColumn }
 		val	statement =
 					"INSERT OR REPLACE INTO `$this.name` (" + columnNamesFromTableColumns(tableColumns) + ") VALUES (" +
 							Array(info.size) { "?" }.joinToString(",") + ")"
-		val	values = info.map() { it.second }
+		val	values = info.map() { it.value }
 
 		// Perform
 		this.statementPerformer.addToTransactionOrPerform(statement, values, lastInsertRowIDProc)
@@ -259,12 +264,18 @@ class SQLiteTable {
 
 	//------------------------------------------------------------------------------------------------------------------
 	fun update(info :List<SQLiteTableColumnAndValue>, where :SQLiteWhere) {
-		// Setup
-		val	statement = "UPDATE `$this.name` SET " + info.joinToString() { "`$it.first.name` = ?" } + where.string
-		val	values = info.map() { it.second } + where.values
+		// Iterate all groups in SQLiteWhere
+		val	groupSize = SQLiteStatementPerformer.variableNumberLimit - info.size
+		where.forEachValueGroup(groupSize) { string, values ->
+			// Compose statement
+			val	statement =
+						"UPDATE `$this.name` SET " +
+								info.map() { "`$it.first.name` = ?" }.joinToString(", ") + string
+			val combinedValues = info.map() { it.value } + values
 
-		// Perform
-		this.statementPerformer.addToTransactionOrPerform(statement, values)
+			// Perform
+			this.statementPerformer.addToTransactionOrPerform(statement, values)
+		}
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -285,7 +296,9 @@ class SQLiteTable {
 	//------------------------------------------------------------------------------------------------------------------
 	private fun columnNamesFromTableColumns(tableColumns :List<SQLiteTableColumn>) :String {
 		// Collect column names
-		return tableColumns.joinToString(",") { "`$it.name`" }
+		return tableColumns
+				.map() { if ((it == SQLiteTableColumn.all) || (it == SQLiteTableColumn.rowID)) it.name else "`$it.name`" }
+				.joinToString(",")
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -312,8 +325,7 @@ class SQLiteTable {
 		} else {
 			// No SQLiteWhere
 			val	statement =
-						"SELECT $columnNames FROM `$this.name`" + (innerJoin?.string ?: "") +
-								(orderBy?.string ?: "")
+						"SELECT $columnNames FROM `$this.name`" + (innerJoin?.string ?: "") + (orderBy?.string ?: "")
 
 			// Perform
 			this.statementPerformer.perform(statement, resultsRowProc = resultsRowProc)
