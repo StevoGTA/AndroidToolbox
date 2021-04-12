@@ -63,7 +63,7 @@ class SQLiteResultsRow(private val cursor :Cursor) {
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
-	fun string(tableColumn :SQLiteTableColumn) :String? {
+	fun text(tableColumn :SQLiteTableColumn) :String? {
 		// Setup
 		if (!tableColumn.kind.isText) throw TableColumnKindMismatchException()
 

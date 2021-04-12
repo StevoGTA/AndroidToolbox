@@ -15,7 +15,7 @@ interface BitmapCache {
 //----------------------------------------------------------------------------------------------------------------------
 open class MemoryBitmapCache(sizeLimit :Long? = null) : MemoryDataCache(sizeLimit), BitmapCache {
 
-	// Methods
+	// BitmapCache Methods
 	//------------------------------------------------------------------------------------------------------------------
 	override fun retrieveBitmap(identifier :String) :Bitmap? {
 		// Try to retrieve data
@@ -33,7 +33,7 @@ open class FilesystemBitmapCache : FilesystemDataCache, BitmapCache {
 	constructor(folder : File, sizeLimit :Long? = null) : super(folder, sizeLimit)
 	constructor(context : Context, folderName :String, sizeLimit :Long? = null) : super(context, folderName, sizeLimit)
 
-	// Methods
+	// BitmapCache Methods
 	//------------------------------------------------------------------------------------------------------------------
 	override fun retrieveBitmap(identifier :String) : Bitmap? {
 		// Try to retrieve data

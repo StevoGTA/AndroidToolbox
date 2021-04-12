@@ -1,9 +1,6 @@
 package codes.stevobrock.androidtoolbox.extensions
 
 //----------------------------------------------------------------------------------------------------------------------
-// List extension
-
-//----------------------------------------------------------------------------------------------------------------------
 fun <T> List<T>.forEachChunk(chunkSize :Int, proc :(ts :List<T>) -> Unit) {
 		// Check count
 		if (count() == 0)

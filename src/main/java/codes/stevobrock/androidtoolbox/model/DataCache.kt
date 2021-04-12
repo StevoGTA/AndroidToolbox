@@ -18,8 +18,7 @@ interface DataCache {
 //----------------------------------------------------------------------------------------------------------------------
 open class MemoryDataCache(private val sizeLimit :Long? = null) : DataCache {
 
-	// Types
-	//------------------------------------------------------------------------------------------------------------------
+	// ItemInfo
 	class ItemInfo(val data :ByteArray, val identifier :String) {
 
 		// Properties
@@ -83,8 +82,7 @@ open class MemoryDataCache(private val sizeLimit :Long? = null) : DataCache {
 //----------------------------------------------------------------------------------------------------------------------
 open class FilesystemDataCache : DataCache {
 
-	// Types
-	//------------------------------------------------------------------------------------------------------------------
+	// ItemInfo
 	class ItemInfo {
 
 		// Properties

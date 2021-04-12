@@ -5,9 +5,6 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 //----------------------------------------------------------------------------------------------------------------------
-// Date extension
-
-//----------------------------------------------------------------------------------------------------------------------
 fun dateFromISO8601(string :String?) :Date? {
 	// Check for null
 	if (string == null) return null

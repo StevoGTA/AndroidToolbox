@@ -69,7 +69,7 @@ class SQLiteStatementPerformer(private val database :SQLiteDatabase) {
 		if (sqliteStatements != null) {
 			// In transaction
 			sqliteStatements.add(sqliteStatement)
-			this.transactionsMap.set(sqliteStatements, Thread.currentThread())
+			this.transactionsMap.set(Thread.currentThread(), sqliteStatements)
 		} else
 			// Perform
 			synchronized(this.lock) { sqliteStatement.perform(this.database) }
@@ -92,7 +92,7 @@ class SQLiteStatementPerformer(private val database :SQLiteDatabase) {
 			throw AlreadyInTransactionException()
 
 		// Start transaction
-		this.transactionsMap.set(ArrayList(), Thread.currentThread())
+		this.transactionsMap.set(Thread.currentThread(), ArrayList())
 
 		// Call proc and check result
 		if (proc() == TransactionResult.COMMIT) {

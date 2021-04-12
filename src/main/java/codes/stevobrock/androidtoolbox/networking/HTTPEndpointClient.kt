@@ -98,8 +98,8 @@ private fun HTTPEndpointRequest.requests(scheme :String, authority :String, port
 										options.contains(HTTPEndpointClient.Options.PERCENT_ENCODE_PLUS_CHARACTER))
 					}
 		val	queryString = (queryComponents ?: arrayListOf())!!.joinToString("&")
-
-		val	urlRoot = uriBuilder!!.build().toString() + (if (queryString.isNotEmpty()) "?$queryString" else "")
+		val	hasQuery = queryString.isNotEmpty() || (this.multiValueQueryComponent != null)
+		val	urlRoot = uriBuilder!!.build().toString() + (if (hasQuery) "?" else "") + queryString
 
 		// Check if have multi-value query parameters
 		if ((this.multiValueQueryComponent != null) && this.multiValueQueryComponent.values.isNotEmpty()){
@@ -260,9 +260,9 @@ open class HTTPEndpointClient(private val scheme :String, private val authority 
 		val isCancelled :Boolean = this.httpEndpointRequestInfo.httpEndpointRequest.isCancelled
 
 		var	state = HTTPEndpointRequest.State.QUEUED
-		private set
+			private set
 
-		// Methods
+		// Instance Methods
 		//--------------------------------------------------------------------------------------------------------------
 		fun transitionToState(state :HTTPEndpointRequest.State) {
 			// Update state

@@ -1,9 +1,6 @@
 package codes.stevobrock.androidtoolbox.extensions
 
 //----------------------------------------------------------------------------------------------------------------------
-// String extension
-
-//----------------------------------------------------------------------------------------------------------------------
 val String.asPhoneNumberForDisplay :String get() {
 												// Setup
 												val test = "$this          "

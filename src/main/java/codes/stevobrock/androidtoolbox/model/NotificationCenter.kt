@@ -28,7 +28,7 @@ class NotificationCenter {
 	// Properties
 	private	var	notificationObserverMap = mutableMapOf<String, MutableList<NotificationObserverInfo>>()
 
-	// Methods
+	// Instance Methods
 	//------------------------------------------------------------------------------------------------------------------
 	fun add(notificationObserver :NotificationObserver, name :String, sender :Any? = null) {
 		// Add
