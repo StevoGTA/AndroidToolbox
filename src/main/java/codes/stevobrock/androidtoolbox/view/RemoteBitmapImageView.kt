@@ -41,12 +41,12 @@ class RemoteBitmapImageView : androidx.appcompat.widget.AppCompatImageView {
 			// Retrieve bitmap
 			this.identifier =
 					this.remoteBitmapRetriever!!.retrieveRemoteBitmap(item, Size(0, 0), aspectFit)
-							{ bitmap, exception ->
+							{ retrievedBitmap, _ ->
 								// Note that we are loaded
 								this.identifier = null
 
 								// Update UI
-								setImageBitmap(bitmap)
+								setImageBitmap(retrievedBitmap)
 							}
 		}
 	}

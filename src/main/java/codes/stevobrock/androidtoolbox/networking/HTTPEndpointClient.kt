@@ -527,12 +527,12 @@ open class HTTPEndpointClient(private val scheme :String, private val authority 
 						updateHTTPEndpointRequestPerformInfos()
 					}
 
-					override fun onFailure(call :Call, exception :IOException) {
+					override fun onFailure(call :Call, e :IOException) {
 						// Log
 						if (logOptions.contains(LogOptions.REQUEST_AND_RESPONSE)) {
 							// Log
 							val	logMessages = ArrayList<String>()
-							logMessages.add("    $this.javaClass.simpleName received exception $exception for $requestInfo")
+							logMessages.add("    $this.javaClass.simpleName received exception $e for $requestInfo")
 							logProc(logMessages)
 						}
 
@@ -542,7 +542,7 @@ open class HTTPEndpointClient(private val scheme :String, private val authority 
 						// Check cancelled
 						if (!httpEndpointRequestPerformInfo.isCancelled)
 							// Process results
-							httpEndpointRequestPerformInfo.processResults(null, exception)
+							httpEndpointRequestPerformInfo.processResults(null, e)
 
 						// Update
 						updateHTTPEndpointRequestPerformInfos()

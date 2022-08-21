@@ -14,12 +14,13 @@ class SQLiteStatement(private val string :String, private val values :List<Any>?
 	//------------------------------------------------------------------------------------------------------------------
 	fun perform(database: SQLiteDatabase) {
 		// Perform
-		if (this.resultsRowProc != null) {
+		val	resultsRowProc = this.resultsRowProc
+		if (resultsRowProc != null) {
 			// Perform as query
 			val	resultsRow = SQLiteResultsRow(database.rawQuery(this.string, null))
 			if (resultsRow.moveToFirst()) {
 				// Iterate all rows
-				do { this.resultsRowProc!!(resultsRow) } while (resultsRow.moveToNext())
+				do { resultsRowProc(resultsRow) } while (resultsRow.moveToNext())
 			}
 			resultsRow.close()
 		} else {
@@ -32,9 +33,10 @@ class SQLiteStatement(private val string :String, private val values :List<Any>?
 				DatabaseUtils.bindObjectToProgram(statement, index + 1, value)
 			}
 
-			if (this.lastInsertRowIDProc != null)
+			val lastInsertRowIDProc = this.lastInsertRowIDProc
+			if (lastInsertRowIDProc != null)
 				// Perform as insert
-				this.lastInsertRowIDProc!!(statement.executeInsert())
+				lastInsertRowIDProc(statement.executeInsert())
 			else
 				// Perform
 				statement.execute()
